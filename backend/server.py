@@ -21,6 +21,9 @@ from lib.multi_agent.coordinator import AgentCoordinator, AgentRole
 from lib.diff.engine import diff_engine
 from lib.summary.generator import ExecutionSummaryGenerator
 
+# Import v3.0 Pipeline components
+from routers import pipeline as pipeline_router
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -507,6 +510,9 @@ async def get_file_changes(session_id: str):
 
 # Include the router in the main app
 app.include_router(api_router)
+
+# Include v3.0 Pipeline router
+app.include_router(pipeline_router.router)
 
 app.add_middleware(
     CORSMiddleware,
