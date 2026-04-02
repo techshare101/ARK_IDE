@@ -69,7 +69,7 @@ class ArkAPI {
   }
 
   async health() {
-    return this.request('GET', '/health');
+    return this.request('GET', '/health/');
   }
 
   async healthCheck() {
