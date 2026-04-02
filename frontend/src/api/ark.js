@@ -21,8 +21,19 @@ class ArkAPI {
   }
 
   // Projects
-  async createProject(goal) {
-    return this.request('POST', '/projects/', { goal });
+  async createProject(goal, workspace_path = '/app') {
+    return this.request('POST', '/projects/', { goal, workspace_path });
+  }
+
+  async createSession(userPrompt, workspacePath = '/app') {
+    // Create project and auto-start pipeline
+    const project = await this.createProject(userPrompt, workspacePath);
+    const projectId = project.project_id || project.id;
+    
+    // Immediately trigger the pipeline
+    await this.runPipeline(projectId);
+    
+    return { ...project, project_id: projectId };
   }
 
   async listProjects() {
