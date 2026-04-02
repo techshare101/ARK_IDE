@@ -42,6 +42,56 @@ export const arkAPI = {
     return response.data;
   },
 
+  // Workflows
+  listWorkflows: async () => {
+    const response = await axios.get(`${API}/workflows`);
+    return response.data;
+  },
+
+  executeWorkflow: async (workflowType, context = '') => {
+    const response = await axios.post(
+      `${API}/workflows/${workflowType}/execute`,
+      null,
+      { params: { context } }
+    );
+    return response.data;
+  },
+
+  // Agents
+  listAgents: async () => {
+    const response = await axios.get(`${API}/agents`);
+    return response.data;
+  },
+
+  assignAgent: async (sessionId, role) => {
+    const response = await axios.post(
+      `${API}/sessions/${sessionId}/assign-agent`,
+      null,
+      { params: { role } }
+    );
+    return response.data;
+  },
+
+  // Summary & Diff
+  getExecutionSummary: async (sessionId) => {
+    const response = await axios.get(`${API}/sessions/${sessionId}/summary`);
+    return response.data;
+  },
+
+  getFileChanges: async (sessionId) => {
+    const response = await axios.get(`${API}/sessions/${sessionId}/file-changes`);
+    return response.data;
+  },
+
+  generateDiff: async (originalContent, newContent, filename) => {
+    const response = await axios.post(`${API}/diff`, {
+      original_content: originalContent,
+      new_content: newContent,
+      filename
+    });
+    return response.data;
+  },
+
   // SSE stream URL
   getStreamURL: (sessionId) => `${API}/sessions/${sessionId}/stream`
 };

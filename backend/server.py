@@ -13,6 +13,11 @@ from models.session import Session, SessionCreate, ApprovalRequest
 from lib.runtime.agent_runner import AgentRunner
 from lib.streaming.sse import sse_manager
 from lib.tools.registry import tool_registry
+from lib.tools.enhanced_registry import enhanced_tool_registry
+from lib.workflows.engine import WorkflowEngine, WorkflowType
+from lib.multi_agent.coordinator import AgentCoordinator, AgentRole
+from lib.diff.engine import diff_engine
+from lib.summary.generator import ExecutionSummaryGenerator
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,9 +33,10 @@ app = FastAPI()
 # Create API router
 api_router = APIRouter(prefix="/api")
 
-# Initialize agent runner
+# Initialize agent runner and enhanced registry
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 agent_runner = AgentRunner(api_key=EMERGENT_LLM_KEY, db=db)
+summary_generator = ExecutionSummaryGenerator(api_key=EMERGENT_LLM_KEY)
 
 # Configure logging
 logging.basicConfig(
@@ -207,9 +213,210 @@ async def approve_action(session_id: str, approval: ApprovalRequest, background_
 async def list_tools():
     """List available tools"""
     return {
-        "tools": tool_registry.get_tool_schemas(),
-        "count": len(tool_registry.tools)
+        "tools": enhanced_tool_registry.get_tool_schemas(),
+        "count": len(enhanced_tool_registry.tools)
     }
+
+
+# ============ WORKFLOW ENDPOINTS ============
+
+@api_router.get("/workflows")
+async def list_workflows():
+    """List available workflows"""
+    workflows = WorkflowEngine.list_workflows()
+    return {
+        "workflows": [w.dict() for w in workflows],
+        "count": len(workflows)
+    }
+
+
+@api_router.post("/workflows/{workflow_type}/execute")
+async def execute_workflow(
+    workflow_type: str,
+    context: str = "",
+    background_tasks: BackgroundTasks = None
+):
+    """Execute a predefined workflow"""
+    try:
+        wf_type = WorkflowType(workflow_type)
+        workflow = WorkflowEngine.get_workflow(wf_type)
+        
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        
+        # Convert workflow to prompt
+        prompt = WorkflowEngine.workflow_to_prompt(wf_type, context)
+        
+        # Create session with workflow prompt
+        session = Session(
+            user_prompt=prompt,
+            workspace_path="/app",
+            status="created"
+        )
+        
+        session_dict = session.model_dump()
+        session_dict['created_at'] = session_dict['created_at'].isoformat()
+        session_dict['completed_at'] = None
+        session_dict['steps'] = []
+        session_dict['plan'] = workflow.description
+        
+        await db.sessions.insert_one(session_dict)
+        
+        return {
+            "session_id": session.id,
+            "workflow": workflow.dict(),
+            "status": "created"
+        }
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid workflow type")
+    except Exception as e:
+        logger.error(f"Error executing workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ MULTI-AGENT ENDPOINTS ============
+
+@api_router.get("/agents")
+async def list_agents():
+    """List available agent roles"""
+    profiles = []
+    for role in AgentRole:
+        profile = AgentCoordinator.get_profile(role)
+        profiles.append({
+            "role": role.value,
+            "description": profile.system_message.split('\\n')[0],
+            "capabilities": profile.capabilities
+        })
+    return {"agents": profiles, "count": len(profiles)}
+
+
+@api_router.post("/sessions/{session_id}/assign-agent")
+async def assign_agent_to_session(session_id: str, role: str):
+    """Assign a specific agent role to a session"""
+    try:
+        agent_role = AgentRole(role)
+        
+        # Update session with agent role
+        await db.sessions.update_one(
+            {"id": session_id},
+            {"$set": {"agent_role": agent_role.value}}
+        )
+        
+        return {
+            "session_id": session_id,
+            "agent_role": agent_role.value,
+            "message": f"Session assigned to {agent_role.value} agent"
+        }
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid agent role")
+    except Exception as e:
+        logger.error(f"Error assigning agent: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ DIFF & SUMMARY ENDPOINTS ============
+
+@api_router.post("/diff")
+async def generate_diff(
+    original_content: str,
+    new_content: str,
+    filename: str = "file"
+):
+    """Generate diff between two file versions"""
+    try:
+        unified_diff = diff_engine.generate_unified_diff(
+            original_content,
+            new_content,
+            filename
+        )
+        
+        side_by_side = diff_engine.generate_side_by_side_diff(
+            original_content,
+            new_content
+        )
+        
+        summary = diff_engine.get_file_change_summary(side_by_side)
+        
+        return {
+            "unified_diff": unified_diff,
+            "side_by_side_diff": side_by_side,
+            "summary": summary
+        }
+    except Exception as e:
+        logger.error(f"Error generating diff: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/sessions/{session_id}/summary")
+async def get_execution_summary(session_id: str):
+    """Get AI-generated execution summary for a session"""
+    try:
+        session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        if session['status'] not in ["completed", "failed", "cancelled"]:
+            return {
+                "session_id": session_id,
+                "summary": f"Session is {session['status']}. Summary will be generated when complete.",
+                "status": session['status']
+            }
+        
+        summary = await summary_generator.generate_summary(
+            session_id=session_id,
+            user_prompt=session['user_prompt'],
+            steps=session.get('steps', []),
+            final_status=session['status']
+        )
+        
+        return {
+            "session_id": session_id,
+            "summary": summary,
+            "status": session['status']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/sessions/{session_id}/file-changes")
+async def get_file_changes(session_id: str):
+    """Get list of files changed during session"""
+    try:
+        session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        file_changes = []
+        for step in session.get('steps', []):
+            tool_call = step.get('tool_call')
+            if tool_call and tool_call.get('tool_name') == 'write_file':
+                args = tool_call.get('arguments', {})
+                result = tool_call.get('result', {}).get('result', {})
+                
+                file_changes.append({
+                    "path": args.get('path'),
+                    "timestamp": step.get('timestamp'),
+                    "step_number": step.get('step_number'),
+                    "original_content": result.get('original_content'),
+                    "bytes_written": result.get('bytes_written')
+                })
+        
+        return {
+            "session_id": session_id,
+            "file_changes": file_changes,
+            "count": len(file_changes)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting file changes: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Include the router in the main app
