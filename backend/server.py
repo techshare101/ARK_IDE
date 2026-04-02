@@ -243,6 +243,9 @@ async def create_todo(input: TodoCreate):
         todo_dict["updated_at"] = todo_dict["updated_at"].isoformat()
 
         await db.todos.insert_one(todo_dict)
+        
+        # Exclude MongoDB _id from response
+        todo_dict.pop("_id", None)
 
         return {"todo": todo_dict}
     except Exception as e:

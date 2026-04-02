@@ -3,7 +3,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resi
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle, ListChecks, Timer } from 'lucide-react';
+import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle, ListChecks, Timer, Monitor, FolderOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSSE } from '../../hooks/useSSE';
 import { arkAPI, BACKEND_URL } from '../../api/ark';
@@ -25,6 +25,8 @@ const ArkDashboard = () => {
   const [processingApproval, setProcessingApproval] = useState(false);
   const [budgetError, setBudgetError] = useState(false);
   const [backendHealthy, setBackendHealthy] = useState(null);
+  const [previewTab, setPreviewTab] = useState('preview'); // 'preview' | 'files'
+  const [previewUrl, setPreviewUrl] = useState('http://localhost:3000');
 
   // SSE connection
   const streamURL = currentSessionId ? arkAPI.getStreamURL(currentSessionId) : null;
@@ -142,6 +144,88 @@ const ArkDashboard = () => {
       setIsExecuting(false);
     }
   }, [events]);
+
+  // Preview Panel Component
+  const PreviewPanel = () => (
+    <div className="flex flex-col h-full bg-gray-900 rounded-lg border border-gray-700">
+      {/* Tab Bar */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-700 bg-gray-800 rounded-t-lg">
+        <button
+          onClick={() => setPreviewTab('preview')}
+          className={`px-3 py-1 text-xs rounded font-medium transition-colors flex items-center gap-1 ${
+            previewTab === 'preview' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          <Monitor className="w-3 h-3" />
+          Preview
+        </button>
+        <button
+          onClick={() => setPreviewTab('files')}
+          className={`px-3 py-1 text-xs rounded font-medium transition-colors flex items-center gap-1 ${
+            previewTab === 'files' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          <FolderOpen className="w-3 h-3" />
+          Files
+        </button>
+        
+        {/* URL Bar (preview tab only) */}
+        {previewTab === 'preview' && (
+          <div className="flex items-center gap-2 ml-auto flex-1 max-w-sm">
+            <input
+              type="text"
+              value={previewUrl}
+              onChange={(e) => setPreviewUrl(e.target.value)}
+              className="flex-1 px-2 py-1 text-xs bg-gray-700 text-gray-200 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+              placeholder="http://localhost:3000"
+            />
+            <button
+              onClick={() => {
+                const iframe = document.getElementById('ark-preview-frame');
+                if (iframe) {
+                  iframe.src = iframe.src;
+                }
+              }}
+              className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
+              title="Refresh Preview"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {/* Preview Tab */}
+      {previewTab === 'preview' && (
+        <div className="flex-1 relative bg-gray-900">
+          <iframe
+            id="ark-preview-frame"
+            src={previewUrl}
+            className="w-full h-full border-0 rounded-b-lg"
+            title="App Preview"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+          />
+        </div>
+      )}
+      
+      {/* Files Tab */}
+      {previewTab === 'files' && (
+        <div className="flex-1 overflow-y-auto p-4 bg-gray-900 rounded-b-lg">
+          <div className="text-center py-12">
+            <FolderOpen className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-400 text-sm">File browser coming soon</p>
+            <p className="text-gray-500 text-xs mt-1">
+              Files created by the agent will appear here
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="h-screen flex flex-col bg-gray-50" data-testid="ark-dashboard">
@@ -338,11 +422,11 @@ const ArkDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        {/* Desktop: 3-panel layout */}
+        {/* Desktop: 3-column layout with Preview */}
         <div className="hidden lg:block h-full">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             {/* Left: Execution Feed + Terminal */}
-            <ResizablePanel defaultSize={55} minSize={30}>
+            <ResizablePanel defaultSize={35} minSize={25}>
               <div className="h-full">
                 <ResizablePanelGroup direction="vertical">
                   {/* Top: Live Feed */}
@@ -362,8 +446,17 @@ const ArkDashboard = () => {
 
             <ResizableHandle />
 
+            {/* Middle: App Preview */}
+            <ResizablePanel defaultSize={35} minSize={25}>
+              <div className="h-full p-4 bg-gray-50">
+                <PreviewPanel />
+              </div>
+            </ResizablePanel>
+
+            <ResizableHandle />
+
             {/* Right: Quick Actions + Plan */}
-            <ResizablePanel defaultSize={45} minSize={30}>
+            <ResizablePanel defaultSize={30} minSize={25}>
               <div className="h-full overflow-y-auto p-4 space-y-4 bg-gray-50">
                 <QuickActionsPanel onWorkflowStart={handleWorkflowStart} />
                 <PlanPanel events={events} />
@@ -382,6 +475,9 @@ const ArkDashboard = () => {
             {currentSessionId && (
               <>
                 <LiveExecutionFeed events={events} isConnected={isConnected} />
+                <div className="h-96">
+                  <PreviewPanel />
+                </div>
                 <PlanPanel events={events} />
                 <TerminalPanel events={events} />
               </>
@@ -392,7 +488,7 @@ const ArkDashboard = () => {
 
       {/* Empty State */}
       {!currentSessionId && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-95 pointer-events-none z-10">
+        <div className="absolute inset-0 hidden lg:flex items-center justify-center bg-gray-50 bg-opacity-95 pointer-events-none">
           <div className="text-center pointer-events-auto max-w-md px-4">
             <div className="text-6xl mb-4">🚀</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to Ark IDE v2.0</h2>
@@ -410,7 +506,7 @@ const ArkDashboard = () => {
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-4">
-              Or use Quick Actions above to start a preset workflow
+              Or use Quick Actions to start a preset workflow
             </p>
           </div>
         </div>

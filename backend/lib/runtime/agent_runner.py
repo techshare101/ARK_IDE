@@ -14,7 +14,7 @@ class AgentRunner:
         self.planner = Planner(api_key)
         self.tool_registry = tool_registry
         self.db = db
-        self.max_steps = 50  # Safety limit
+        self.max_steps = 10  # Hard cap to prevent infinite loops
     
     async def run(self, session: Session):
         """Main agent execution loop"""
@@ -41,7 +41,7 @@ class AgentRunner:
                 await sse_manager.send_event(
                     session.id,
                     "thinking",
-                    {"step": session.current_step, "message": "Planning next action..."}
+                    {"step": session.current_step, "message": f"Step {session.current_step}/{self.max_steps}: Planning next action..."}
                 )
                 
                 decision = await self.planner.plan_next_step(

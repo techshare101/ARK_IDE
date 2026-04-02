@@ -101,3 +101,62 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Fix two critical P0 blockers in Ark IDE: (1) Agent stuck in infinite thinking loop after executing tasks, (2) Missing App Preview window in frontend"
+
+backend:
+  - task: "Fix infinite thinking loop in agent execution"
+    implemented: true
+    working: true
+    file: "/app/backend/lib/runtime/planner.py, /app/backend/lib/runtime/agent_runner.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Updated planner.py system prompt with strict completion rules and enforcement of 'done' output. Modified agent_runner.py to reduce max_steps from 50 to 10, improved execution history tracking with SUCCESS/FAILED indicators, and enhanced context building. Tested with simple file creation task - agent completed in 2 steps and properly terminated with 'done' state."
+
+frontend:
+  - task: "Implement App Preview window"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ark/ArkDashboard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added PreviewPanel component with tabbed interface (Preview/Files). Updated desktop layout from 2-panel to 3-panel (Execution Feed + Preview + Plan). Preview panel includes iframe for app preview, URL bar with refresh button, and placeholder for file browser. Verified via screenshot - all 3 panels visible with working tabs."
+  
+  - task: "Fix mobile overlay blocking Quick Actions"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ark/ArkDashboard.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Changed empty state overlay from 'flex' to 'hidden lg:flex' to only show on desktop, preventing z-index blocking on mobile. Added preview panel to mobile layout with fixed height. Verified via screenshot - Quick Actions fully visible and clickable on mobile."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Fix infinite thinking loop in agent execution"
+    - "Implement App Preview window"
+    - "Fix mobile overlay blocking Quick Actions"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Completed both P0 fixes. Backend: Updated planner system prompt with strict termination rules, reduced max_steps to 10, improved history tracking. Agent now completes tasks properly (tested: 2-step completion for file creation). Frontend: Added 3-panel layout with App Preview (iframe + tabs), fixed mobile overlay z-index issue. Need comprehensive testing of: (1) Agent execution loop with various prompts, (2) Preview panel functionality, (3) Mobile responsiveness."

@@ -6,29 +6,56 @@ from typing import Dict, Any, Optional
 class Planner:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.system_message = """You are an AI agent planner. Your job is to decide the next action.
+        self.system_message = """You are an AI agent planner executing tasks step-by-step using tools.
 
-You can use these tools:
+AVAILABLE TOOLS:
 - list_files: List files in a directory
 - read_file: Read file contents
 - write_file: Write/create a file
 - run_command: Execute shell commands (requires approval)
 
-Respond with ONLY valid JSON in this exact format:
+STRICT DECISION LOOP:
+1. Look at the TASK and EXECUTION HISTORY
+2. If task is NOT complete → choose ONE tool to call next
+3. If task IS complete (files created, commands run, goal achieved) → output "done" IMMEDIATELY
+
+OUTPUT FORMAT (strict JSON only, NO markdown):
+
+To call a tool:
 {
-  "thought": "your reasoning about what to do next",
-  "action": "tool" or "done" or "error",
-  "tool_name": "name_of_tool" (only if action is "tool"),
-  "tool_args": {"arg1": "value1"} (only if action is "tool"),
-  "summary": "task completion summary" (only if action is "done")
+  "thought": "why I need to call this tool",
+  "action": "tool",
+  "tool_name": "tool_name",
+  "tool_args": {"arg": "value"}
 }
 
-Rules:
-1. Always think before acting
-2. Use tools systematically to accomplish the user's goal
-3. When task is complete, set action to "done" with a summary
-4. If you encounter an unrecoverable error, set action to "error"
-5. For run_command, explain why it's needed - it requires user approval
+To finish (when task is complete):
+{
+  "thought": "task is complete",
+  "action": "done",
+  "summary": "what was accomplished"
+}
+
+To report error:
+{
+  "thought": "error occurred",
+  "action": "error",
+  "error": "error description"
+}
+
+CRITICAL COMPLETION RULES:
+- NEVER repeat a tool call with the same arguments you already made
+- After write_file succeeds → output "done" on NEXT step (check history first)
+- After run_command succeeds → check if goal is met, then output "done"
+- DO NOT call list_files or read_file after task is already complete
+- Maximum 10 steps total — if you reach step 10, output "done" with what was accomplished
+- If a tool returns success AND the user's goal is met → output "done" immediately
+
+COMPLETION TRIGGERS (output "done" when ANY are true):
+✓ write_file returned success for the requested file
+✓ run_command returned exit code 0 and goal is met
+✓ User's original request has been fulfilled based on execution history
+✓ Step 10 reached (hard limit)
 """
     
     async def plan_next_step(self, 
@@ -42,18 +69,31 @@ Rules:
         context_parts = [f"User request: {user_prompt}\n"]
         
         if history:
-            context_parts.append("\nExecution history:")
-            for i, step in enumerate(history[-10:]):  # Last 10 steps
-                context_parts.append(f"\nStep {i + 1}:")
-                context_parts.append(f"Type: {step.get('type')}")
+            context_parts.append(f"\nExecution history ({len(history)} steps taken):")
+            for i, step in enumerate(history[-10:], 1):  # Last 10 steps
+                step_type = step.get('type')
+                context_parts.append(f"\nStep {i}: [{step_type.upper()}]")
+                
                 if step.get('content'):
-                    context_parts.append(f"Content: {step.get('content')}")
+                    context_parts.append(f"  Content: {step.get('content')}")
+                
                 if step.get('tool_call'):
                     tc = step['tool_call']
-                    context_parts.append(f"Tool: {tc.get('tool_name')}")
-                    context_parts.append(f"Result: {tc.get('result')}")
+                    tool_name = tc.get('tool_name')
+                    result = tc.get('result', {})
+                    success = result.get('success', False)
+                    context_parts.append(f"  Tool: {tool_name}")
+                    context_parts.append(f"  Status: {'✓ SUCCESS' if success else '✗ FAILED'}")
+                    
+                    # Show result details
+                    if success and 'message' in result:
+                        context_parts.append(f"  Result: {result['message']}")
+        else:
+            context_parts.append("\nNo actions taken yet.")
         
-        context_parts.append("\nDecide the next action:")
+        context_parts.append(f"\nCurrent step: {len(history) + 1}/{10}")
+        context_parts.append("\nBased on the history above, what should you do next?")
+        context_parts.append("If the user's request is already fulfilled, output 'done' immediately.")
         context = "\n".join(context_parts)
         
         # Create chat instance
@@ -105,7 +145,7 @@ Rules:
             
             return decision
             
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             # Fallback: Try to continue with a safe action
             return {
                 "thought": "Previous response was malformed. Let me try a simpler approach.",
