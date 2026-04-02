@@ -1,77 +1,54 @@
 import asyncio
 import logging
-from typing import Callable, Any, Optional
+from typing import Callable, TypeVar, Any
 from functools import wraps
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
-class RetryConfig:
-    """Configuration for retry behavior"""
-    def __init__(
-        self,
-        max_attempts: int = 3,
-        initial_delay: float = 1.0,
-        max_delay: float = 10.0,
-        exponential_base: float = 2.0
-    ):
-        self.max_attempts = max_attempts
-        self.initial_delay = initial_delay
-        self.max_delay = max_delay
-        self.exponential_base = exponential_base
 
 async def retry_with_backoff(
     func: Callable,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    exponential_base: float = 2.0,
     *args,
-    config: Optional[RetryConfig] = None,
-    **kwargs
+    **kwargs,
 ) -> Any:
-    """
-    Retry a function with exponential backoff
-    """
-    if config is None:
-        config = RetryConfig()
-    
+    """Retry an async function with exponential backoff."""
     last_exception = None
-    
-    for attempt in range(config.max_attempts):
+
+    for attempt in range(max_retries + 1):
         try:
-            result = await func(*args, **kwargs)
-            
-            if attempt > 0:
-                logger.info(f"Retry succeeded on attempt {attempt + 1}")
-            
-            return result
-            
+            return await func(*args, **kwargs)
         except Exception as e:
             last_exception = e
-            
-            if attempt < config.max_attempts - 1:
-                delay = min(
-                    config.initial_delay * (config.exponential_base ** attempt),
-                    config.max_delay
-                )
-                
-                logger.warning(
-                    f"Attempt {attempt + 1} failed: {str(e)}. "
-                    f"Retrying in {delay:.2f}s..."
-                )
-                
-                await asyncio.sleep(delay)
-            else:
-                logger.error(
-                    f"All {config.max_attempts} attempts failed. "
-                    f"Last error: {str(e)}"
-                )
-    
+            if attempt == max_retries:
+                logger.error(f"All {max_retries + 1} attempts failed. Last error: {e}")
+                raise
+
+            delay = min(base_delay * (exponential_base ** attempt), max_delay)
+            logger.warning(
+                f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.1f}s..."
+            )
+            await asyncio.sleep(delay)
+
     raise last_exception
 
-def with_retry(config: Optional[RetryConfig] = None):
-    """
-    Decorator for automatic retry with backoff
-    """
+
+def retry(
+    max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 30.0
+):
+    """Decorator for retry with exponential backoff."""
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            return await retry_with_backoff(func, *args, config=config, **kwargs)
+            return await retry_with_backoff(
+                func, max_retries, base_delay, max_delay, 2.0, *args, **kwargs
+            )
+
         return wrapper
+
     return decorator

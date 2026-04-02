@@ -1,86 +1,81 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-export const useSSE = (url, enabled = false) => {
+const MAX_EVENTS = 200;
+const RECONNECT_DELAY = 3000;
+const MAX_RECONNECTS = 5;
+
+export function useSSE(url, enabled = true) {
   const [events, setEvents] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
   const eventSourceRef = useRef(null);
+  const reconnectCountRef = useRef(0);
+  const reconnectTimerRef = useRef(null);
+  const mountedRef = useRef(true);
 
   const connect = useCallback(() => {
-    if (!url || !enabled) return;
-
-    try {
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        console.log('SSE connected');
-        setIsConnected(true);
-        setError(null);
-      };
-
-      // Handle all event types
-      const eventTypes = [
-        'started',
-        'thinking',
-        'thought',
-        'tool_call',
-        'tool_result',
-        'approval_required',
-        'done',
-        'error'
-      ];
-
-      eventTypes.forEach(eventType => {
-        eventSource.addEventListener(eventType, (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            const event = {
-              type: eventType,
-              data,
-              timestamp: new Date().toISOString()
-            };
-            setEvents(prev => [...prev, event]);
-          } catch (err) {
-            console.error('Error parsing SSE event:', err);
-          }
-        });
-      });
-
-      eventSource.onerror = (err) => {
-        console.error('SSE error:', err);
-        setError('Connection error');
-        setIsConnected(false);
-        eventSource.close();
-      };
-
-    } catch (err) {
-      console.error('Failed to create EventSource:', err);
-      setError(err.message);
-    }
-  }, [url, enabled]);
-
-  const disconnect = useCallback(() => {
+    if (!url || !enabled || !mountedRef.current) return;
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
-      eventSourceRef.current = null;
-      setIsConnected(false);
     }
-  }, []);
 
-  const clearEvents = useCallback(() => {
-    setEvents([]);
-  }, []);
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+
+    es.onopen = () => {
+      if (!mountedRef.current) return;
+      setConnected(true);
+      setError(null);
+      reconnectCountRef.current = 0;
+    };
+
+    es.onmessage = (e) => {
+      if (!mountedRef.current) return;
+      try {
+        const event = JSON.parse(e.data);
+        if (event.event_type === 'heartbeat') return;
+        if (event.event_type === 'stream_end') {
+          setConnected(false);
+          es.close();
+          return;
+        }
+        setEvents(prev => {
+          const updated = [...prev, { ...event, _id: Date.now() + Math.random() }];
+          return updated.slice(-MAX_EVENTS);
+        });
+      } catch (err) {
+        console.warn('Failed to parse SSE event:', err);
+      }
+    };
+
+    es.onerror = () => {
+      if (!mountedRef.current) return;
+      setConnected(false);
+      es.close();
+
+      if (reconnectCountRef.current < MAX_RECONNECTS) {
+        reconnectCountRef.current++;
+        setError(`Connection lost. Reconnecting (${reconnectCountRef.current}/${MAX_RECONNECTS})...`);
+        reconnectTimerRef.current = setTimeout(connect, RECONNECT_DELAY);
+      } else {
+        setError('Connection failed after maximum retries.');
+      }
+    };
+  }, [url, enabled]);
 
   useEffect(() => {
-    if (enabled) {
-      connect();
-    }
-
+    mountedRef.current = true;
+    if (enabled && url) connect();
     return () => {
-      disconnect();
+      mountedRef.current = false;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (eventSourceRef.current) eventSourceRef.current.close();
     };
-  }, [url, enabled, connect, disconnect]);
+  }, [url, enabled, connect]);
 
-  return { events, isConnected, error, clearEvents, reconnect: connect };
-};
+  const clearEvents = useCallback(() => setEvents([]), []);
+
+  return { events, connected, error, clearEvents };
+}
+
+export default useSSE;
