@@ -1,6 +1,10 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
 class ArkAPI {
+  constructor() {
+    this.baseUrl = API_BASE;
+  }
+
   async request(method, path, body = null) {
     const options = {
       method,
@@ -18,48 +22,52 @@ class ArkAPI {
 
   // Projects
   async createProject(goal) {
-    return this.request('POST', '/api/projects', { goal });
+    return this.request('POST', '/projects/', { goal });
   }
 
   async listProjects() {
-    return this.request('GET', '/api/projects');
+    return this.request('GET', '/projects/');
   }
 
   async getProject(id) {
-    return this.request('GET', `/api/projects/${id}`);
+    return this.request('GET', `/projects/${id}`);
   }
 
   async runPipeline(id) {
-    return this.request('POST', `/api/projects/${id}/run`);
+    return this.request('POST', `/projects/${id}/run`);
   }
 
   async getFiles(id) {
-    return this.request('GET', `/api/projects/${id}/files`);
+    return this.request('GET', `/projects/${id}/files`);
   }
 
   async getTests(id) {
-    return this.request('GET', `/api/projects/${id}/tests`);
+    return this.request('GET', `/projects/${id}/tests`);
   }
 
   async getDeploy(id) {
-    return this.request('GET', `/api/projects/${id}/deploy`);
+    return this.request('GET', `/projects/${id}/deploy`);
   }
 
   async approveAction(id, actionId, approved) {
-    return this.request('POST', `/api/projects/${id}/approve`, { action_id: actionId, approved });
+    return this.request('POST', `/projects/${id}/approve`, { action_id: actionId, approved });
   }
 
   async deleteProject(id) {
-    return this.request('DELETE', `/api/projects/${id}`);
+    return this.request('DELETE', `/projects/${id}`);
   }
 
   async health() {
     return this.request('GET', '/health');
   }
 
+  async healthCheck() {
+    return this.health();
+  }
+
   // SSE stream URL
   getStreamUrl(id) {
-    return `${API_BASE}/api/projects/${id}/stream`;
+    return `${API_BASE}/projects/${id}/stream`;
   }
 }
 
