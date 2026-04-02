@@ -82,20 +82,36 @@ Rules:
                 end = response_text.find("```", start)
                 response_text = response_text[start:end].strip()
             
+            # Try to fix incomplete JSON by adding closing braces
+            open_braces = response_text.count('{') - response_text.count('}')
+            if open_braces > 0:
+                response_text += '}' * open_braces
+            
             decision = json.loads(response_text)
             
             # Validate structure
             if "action" not in decision:
                 raise ValueError("Missing 'action' field in response")
             
+            # Ensure required fields based on action
+            if decision.get("action") == "tool":
+                if "tool_name" not in decision or "tool_args" not in decision:
+                    # Try to infer from thought
+                    return {
+                        "thought": decision.get("thought", "Continuing..."),
+                        "action": "error",
+                        "error": "Incomplete tool specification. Please be more specific."
+                    }
+            
             return decision
             
         except json.JSONDecodeError as e:
-            # Fallback: return error action
+            # Fallback: Try to continue with a safe action
             return {
-                "thought": "Failed to parse planner response",
-                "action": "error",
-                "error": f"JSON parse error: {str(e)}. Response was: {response[:200]}"
+                "thought": "Previous response was malformed. Let me try a simpler approach.",
+                "action": "tool",
+                "tool_name": "list_files",
+                "tool_args": {"path": "."}
             }
         except Exception as e:
             return {
