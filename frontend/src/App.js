@@ -3,6 +3,7 @@ import './App.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ArkDashboard from './components/ark/ArkDashboard';
 import TodoPage from './components/todos/TodoPage';
+import CountUpPage from './components/countup/CountUpPage';
 import { Toaster } from './components/ui/sonner';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<ArkDashboard />} />
           <Route path="/todos" element={<TodoPage />} />
+          <Route path="/countup" element={<CountUpPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />

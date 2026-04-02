@@ -3,7 +3,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resi
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle, ListChecks } from 'lucide-react';
+import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle, ListChecks, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSSE } from '../../hooks/useSSE';
 import { arkAPI, BACKEND_URL } from '../../api/ark';
@@ -176,6 +176,13 @@ const ArkDashboard = () => {
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Navigation */}
           <Button asChild variant="outline" size="sm" className="flex items-center gap-2">
+            <Link to="/countup">
+              <Timer className="w-4 h-4" />
+              <span className="hidden sm:inline">Count Up</span>
+            </Link>
+          </Button>
+
+          <Button asChild variant="outline" size="sm" className="flex items-center gap-2">
             <Link to="/todos">
               <ListChecks className="w-4 h-4" />
               <span className="hidden sm:inline">Todos</span>
@@ -250,7 +257,7 @@ const ArkDashboard = () => {
         <div className="px-4 sm:px-6 pt-4">
           <Alert variant="destructive" className="border-2">
             <AlertTriangle className="h-5 w-5" />
-            <AlertDescription className="ml-2">
+            <AlertDescription className="ml--2">
               <strong>Universal Key Budget Limit Reached:</strong> Your Universal Key has hit its $1.00 spending limit.
               <div className="mt-3 space-y-2">
                 <div className="text-sm text-red-800 bg-red-50 p-2 rounded">
