@@ -22,7 +22,7 @@ class ArkAPI {
 
   // Projects
   async createProject(goal, workspace_path = '/app') {
-    return this.request('POST', '/projects/', { goal, workspace_path });
+    return this.request('POST', '/api/projects/', { goal, workspace_path });
   }
 
   async createSession(userPrompt, workspacePath = '/app') {
@@ -37,39 +37,39 @@ class ArkAPI {
   }
 
   async listProjects() {
-    return this.request('GET', '/projects/');
+    return this.request('GET', '/api/projects/');
   }
 
   async getProject(id) {
-    return this.request('GET', `/projects/${id}`);
+    return this.request('GET', `/api/projects/${id}`);
   }
 
   async runPipeline(id) {
-    return this.request('POST', `/projects/${id}/run`);
+    return this.request('POST', `/api/projects/${id}/run`);
   }
 
   async getFiles(id) {
-    return this.request('GET', `/projects/${id}/files`);
+    return this.request('GET', `/api/projects/${id}/files`);
   }
 
   async getTests(id) {
-    return this.request('GET', `/projects/${id}/tests`);
+    return this.request('GET', `/api/projects/${id}/tests`);
   }
 
   async getDeploy(id) {
-    return this.request('GET', `/projects/${id}/deploy`);
+    return this.request('GET', `/api/projects/${id}/deploy`);
   }
 
   async approveAction(id, actionId, approved) {
-    return this.request('POST', `/projects/${id}/approve`, { action_id: actionId, approved });
+    return this.request('POST', `/api/projects/${id}/approve`, { action_id: actionId, approved });
   }
 
   async deleteProject(id) {
-    return this.request('DELETE', `/projects/${id}`);
+    return this.request('DELETE', `/api/projects/${id}`);
   }
 
   async health() {
-    return this.request('GET', '/health/');
+    return this.request('GET', '/api/health/');
   }
 
   async healthCheck() {
@@ -78,7 +78,7 @@ class ArkAPI {
 
   // SSE stream URL
   getStreamUrl(id) {
-    return `${API_BASE}/projects/${id}/stream`;
+    return `${API_BASE}/api/projects/${id}/stream`;
   }
 }
 
