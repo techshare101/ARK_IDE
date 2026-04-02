@@ -239,7 +239,7 @@ const ArkDashboard = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ark IDE</h1>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-gray-500 hidden sm:block">AI Agent Workbench v2.0</p>
+                <p className="text-xs text-gray-500 hidden sm:block">AI Agent Workbench v3.0</p>
                 {backendHealthy !== null && (
                   <div className="flex items-center gap-1">
                     {backendHealthy ? (
@@ -491,9 +491,9 @@ const ArkDashboard = () => {
         <div className="absolute inset-0 hidden lg:flex items-center justify-center bg-gray-50 bg-opacity-95 pointer-events-none">
           <div className="text-center pointer-events-auto max-w-md px-4">
             <div className="text-6xl mb-4">🚀</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to Ark IDE v2.0</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome to ARK IDE v3.0</h2>
             <p className="text-gray-600 mb-6">
-              Feature-rich AI agent workbench with workflows, multi-agent coordination, and git integration
+              Autonomous Software Development Platform — From goal to deployed app in minutes
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button

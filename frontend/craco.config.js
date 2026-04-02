@@ -58,9 +58,18 @@ let webpackConfig = {
       return webpackConfig;
     },
   },
+  devServer: {
+    allowedHosts: 'all',  // Allow all hosts for preview
+    client: {
+      webSocketURL: 'auto://0.0.0.0:0/ws',
+    },
+  },
 };
 
 webpackConfig.devServer = (devServerConfig) => {
+  // Disable host check to allow preview URLs
+  devServerConfig.allowedHosts = 'all';
+  
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
