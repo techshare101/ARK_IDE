@@ -200,6 +200,25 @@ export default function App() {
     }
   };
 
+  const handleStopPipeline = async () => {
+    if (!activeProject?.id) return;
+    if (!window.confirm('Stop the running pipeline? This will terminate all agents.')) return;
+    
+    try {
+      // Call DELETE /projects/{id}/run
+      await fetch(`${arkAPI.baseUrl}/projects/${activeProject.id}/run`, {
+        method: 'DELETE',
+      });
+      
+      const stopped = { ...activeProject, status: 'failed', error: 'Stopped by user' };
+      setActiveProject(stopped);
+      setProjects(prev => prev.map(p => p.id === stopped.id ? stopped : p));
+      addToast('Pipeline stopped', 'warning');
+    } catch (err) {
+      addToast('Failed to stop pipeline: ' + err.message, 'error');
+    }
+  };
+
   const handleDeleteProject = async (projectId) => {
     if (!window.confirm('Delete this project? This cannot be undone.')) return;
     try {
@@ -326,7 +345,11 @@ export default function App() {
               {/* Tab content */}
               <div className="flex-1 overflow-auto p-4">
                 {activeTab === 'pipeline' && (
-                  <PipelineView project={activeProject} events={events} />
+                  <PipelineView 
+                    project={activeProject} 
+                    events={events} 
+                    onStop={handleStopPipeline}
+                  />
                 )}
                 {activeTab === 'events' && (
                   <EventLog events={events} connected={connected} onClear={clearEvents} />
@@ -335,7 +358,7 @@ export default function App() {
                   <FileExplorer files={files} loading={loadingFiles} />
                 )}
                 {activeTab === 'tests' && (
-                  <TestResults tests={tests} loading={loadingTests} />
+                  <TestResults tests={tests} loading={loadingFiles} />
                 )}
                 {activeTab === 'deploy' && (
                   <DeployPanel deploy={deploy} loading={loadingDeploy} />
