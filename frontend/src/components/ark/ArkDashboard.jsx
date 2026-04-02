@@ -3,9 +3,9 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resi
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Play, Plus, RefreshCw, AlertTriangle, Zap } from 'lucide-react';
+import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle } from 'lucide-react';
 import { useSSE } from '../../hooks/useSSE';
-import { arkAPI } from '../../api/ark';
+import { arkAPI, BACKEND_URL } from '../../api/ark';
 import LiveExecutionFeed from './LiveExecutionFeed';
 import PlanPanel from './PlanPanel';
 import TerminalPanel from './TerminalPanel';
@@ -23,6 +23,7 @@ const ArkDashboard = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [processingApproval, setProcessingApproval] = useState(false);
   const [budgetError, setBudgetError] = useState(false);
+  const [backendHealthy, setBackendHealthy] = useState(null);
 
   // SSE connection
   const streamURL = currentSessionId ? arkAPI.getStreamURL(currentSessionId) : null;
@@ -30,6 +31,22 @@ const ArkDashboard = () => {
 
   // Find pending approval
   const pendingApproval = events.find(e => e.type === 'approval_required');
+
+  // Check backend health on mount
+  useEffect(() => {
+    const checkBackendHealth = async () => {
+      console.log('Checking backend health at:', BACKEND_URL);
+      const health = await arkAPI.healthCheck();
+      console.log('Backend health:', health);
+      setBackendHealthy(health.healthy);
+      
+      if (!health.healthy) {
+        toast.error('Cannot connect to backend API');
+      }
+    };
+    
+    checkBackendHealth();
+  }, []);
 
   // Check for budget errors in events
   useEffect(() => {
@@ -136,7 +153,21 @@ const ArkDashboard = () => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ark IDE</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">AI Agent Workbench v2.0</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-500 hidden sm:block">AI Agent Workbench v2.0</p>
+                {backendHealthy !== null && (
+                  <div className="flex items-center gap-1">
+                    {backendHealthy ? (
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                    ) : (
+                      <XCircle className="w-3 h-3 text-red-500" />
+                    )}
+                    <span className="text-xs text-gray-500">
+                      {backendHealthy ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -172,6 +203,38 @@ const ArkDashboard = () => {
           </Button>
         </div>
       </div>
+
+      {/* Backend Connection Error */}
+      {backendHealthy === false && (
+        <div className="px-4 sm:px-6 pt-4">
+          <Alert variant="destructive" className="border-2">
+            <XCircle className="h-5 w-5" />
+            <AlertDescription className="ml-2">
+              <strong>Connection Error:</strong> Cannot connect to backend API at <code className="text-xs">{BACKEND_URL}</code>
+              <div className="mt-3 space-y-2">
+                <div className="text-xs text-red-800">
+                  <strong>Possible causes:</strong>
+                  <ul className="list-disc ml-4 mt-1">
+                    <li>Backend server is not running</li>
+                    <li>Network connectivity issues</li>
+                    <li>CORS configuration problem</li>
+                    <li>Incorrect backend URL</li>
+                  </ul>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  className="bg-white hover:bg-gray-100"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reload Page
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       {/* Budget Error Alert */}
       {budgetError && (

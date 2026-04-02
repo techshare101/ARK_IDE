@@ -1,7 +1,33 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Fallback to window.location.origin if env var is not set
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || window.location.origin;
 const API = `${BACKEND_URL}/api`;
+
+// Add request interceptor for debugging
+axios.interceptors.request.use(
+  (config) => {
+    console.log('API Request:', config.method.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Response Error:', error.message);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const arkAPI = {
   // Session management
@@ -93,5 +119,18 @@ export const arkAPI = {
   },
 
   // SSE stream URL
-  getStreamURL: (sessionId) => `${API}/sessions/${sessionId}/stream`
+  getStreamURL: (sessionId) => `${API}/sessions/${sessionId}/stream`,
+  
+  // Health check
+  healthCheck: async () => {
+    try {
+      const response = await axios.get(`${API}/`);
+      return { healthy: true, data: response.data };
+    } catch (error) {
+      return { healthy: false, error: error.message };
+    }
+  }
 };
+
+// Export API base URL for debugging
+export { BACKEND_URL, API };
