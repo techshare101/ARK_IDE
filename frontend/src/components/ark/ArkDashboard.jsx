@@ -242,8 +242,11 @@ const ArkDashboard = () => {
           <Alert variant="destructive" className="border-2">
             <AlertTriangle className="h-5 w-5" />
             <AlertDescription className="ml-2">
-              <strong>Budget Exceeded:</strong> Your Emergent LLM Key has reached its $1.00 limit.
+              <strong>Universal Key Budget Limit Reached:</strong> Your Universal Key has hit its $1.00 spending limit.
               <div className="mt-3 space-y-2">
+                <div className="text-sm text-red-800 bg-red-50 p-2 rounded">
+                  <strong>Important:</strong> You have credits in your account, but your Universal Key needs a higher budget limit.
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -252,11 +255,18 @@ const ArkDashboard = () => {
                     className="bg-white hover:bg-gray-100"
                   >
                     <Zap className="w-4 h-4 mr-2" />
-                    Top Up Universal Key
+                    Increase Key Budget Limit
                   </Button>
                 </div>
                 <div className="text-xs text-red-800">
-                  Click above to open Emergent Platform → Profile → Universal Key → Add Balance
+                  <strong>Steps:</strong>
+                  <ol className="list-decimal ml-4 mt-1 space-y-1">
+                    <li>Click button above to open Emergent Platform</li>
+                    <li>Go to Profile → Universal Key</li>
+                    <li>Find "Budget Limit" setting</li>
+                    <li>Increase limit from $1.00 to $10+ (recommended)</li>
+                    <li>Or set to unlimited if you prefer</li>
+                  </ol>
                 </div>
               </div>
             </AlertDescription>
