@@ -154,6 +154,15 @@ const ArkDashboard = () => {
             </>
           )}
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open('https://app.emergent.sh/profile', '_blank')}
+            className="hidden sm:flex items-center gap-1"
+          >
+            <Zap className="w-3 h-3" />
+            <span className="text-xs">Universal Key</span>
+          </Button>
+          <Button
             onClick={() => setShowNewSessionModal(true)}
             className="flex items-center gap-2"
             data-testid="new-session-button"
@@ -171,11 +180,46 @@ const ArkDashboard = () => {
             <AlertTriangle className="h-5 w-5" />
             <AlertDescription className="ml-2">
               <strong>Budget Exceeded:</strong> Your Emergent LLM Key has reached its $1.00 limit.
-              <div className="mt-2 text-sm">
-                → Go to <strong>Profile → Universal Key → Add Balance</strong> to continue using Ark IDE.
-                <br />
-                → Or enable <strong>Auto Top-Up</strong> to never run out of credits.
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('https://app.emergent.sh/profile', '_blank')}
+                    className="bg-white hover:bg-gray-100"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    Top Up Universal Key
+                  </Button>
+                </div>
+                <div className="text-xs text-red-800">
+                  Click above to open Emergent Platform → Profile → Universal Key → Add Balance
+                </div>
               </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Universal Key Info Banner */}
+      {!budgetError && !currentSessionId && (
+        <div className="px-4 sm:px-6 pt-4">
+          <Alert className="border-blue-200 bg-blue-50">
+            <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-900">
+                  Ark IDE uses your <strong>Emergent Universal Key</strong> for AI features
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('https://app.emergent.sh/profile', '_blank')}
+                className="bg-white hover:bg-gray-100 text-xs"
+              >
+                Manage Key
+              </Button>
             </AlertDescription>
           </Alert>
         </div>
