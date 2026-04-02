@@ -64,4 +64,5 @@ class ArkAPI {
 }
 
 export const arkAPI = new ArkAPI();
+export const BACKEND_URL = API_BASE;
 export default arkAPI;

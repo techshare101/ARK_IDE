@@ -1,8 +1,8 @@
 import React from 'react';
 import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 
 const ApprovalCard = ({ event, onApprove, onReject, isProcessing }) => {
   if (!event || event.type !== 'approval_required') return null;

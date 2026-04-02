@@ -1,8 +1,8 @@
 import React from 'react';
 import { Terminal as TerminalIcon } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '../ui/card';
+import { ScrollArea } from '../ui/scroll-area';
+import { Badge } from '../ui/badge';
 
 const TerminalPanel = ({ events }) => {
   // Extract command executions
