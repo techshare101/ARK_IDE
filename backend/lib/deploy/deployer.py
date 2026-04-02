@@ -27,6 +27,7 @@ class DeploymentResult:
         self.deploy_url = deploy_url
         self.port = port
         self.error = error
+        self.status = "deployed" if success else "failed"
         self.deployed_at = datetime.utcnow() if success else None
 
     def to_deploy_info(self) -> DeployInfo:
@@ -43,16 +44,25 @@ class DeploymentResult:
 class Deployer:
     """Handles deployment of built projects to E2B sandboxes."""
 
+    def __init__(self, sandbox_client=None):
+        """Initialize deployer with optional sandbox client."""
+        self.sandbox_client = sandbox_client
+
     async def deploy(
         self,
-        sandbox_client,
         run_command: str,
         port: int = 3000,
         env: Optional[Dict[str, str]] = None,
         timeout: int = 60,
+        **kwargs  # Accept extra args like tech_stack, project_name
     ) -> DeploymentResult:
         """Deploy a project by starting its run command in the sandbox."""
         logger.info(f"Deploying with command: {run_command!r} on port {port}")
+        
+        sandbox_client = self.sandbox_client
+        if not sandbox_client:
+            return DeploymentResult(success=False, error="No sandbox client configured")
+        
         try:
             start_cmd = f"nohup {run_command} > /tmp/app.log 2>&1 &"
             result = await sandbox_client.run_command(start_cmd, timeout=timeout, env=env or {})
