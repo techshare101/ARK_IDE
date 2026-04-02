@@ -3,7 +3,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../ui/resi
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle } from 'lucide-react';
+import { Play, Plus, RefreshCw, AlertTriangle, Zap, CheckCircle, XCircle, ListChecks } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSSE } from '../../hooks/useSSE';
 import { arkAPI, BACKEND_URL } from '../../api/ark';
 import LiveExecutionFeed from './LiveExecutionFeed';
@@ -39,19 +40,19 @@ const ArkDashboard = () => {
       const health = await arkAPI.healthCheck();
       console.log('Backend health:', health);
       setBackendHealthy(health.healthy);
-      
+
       if (!health.healthy) {
         toast.error('Cannot connect to backend API');
       }
     };
-    
+
     checkBackendHealth();
   }, []);
 
   // Check for budget errors in events
   useEffect(() => {
-    const errorEvent = events.find(e => 
-      e.type === 'error' && 
+    const errorEvent = events.find(e =>
+      e.type === 'error' &&
       e.data?.error?.includes('Budget has been exceeded')
     );
     if (errorEvent) {
@@ -71,7 +72,7 @@ const ArkDashboard = () => {
           console.error('Error fetching session:', error);
         }
       };
-      
+
       fetchSession();
       const interval = setInterval(fetchSession, 3000);
       return () => clearInterval(interval);
@@ -85,7 +86,7 @@ const ArkDashboard = () => {
       clearEvents();
       setBudgetError(false);
       toast.success('Session created successfully!');
-      
+
       // Auto-start execution
       setTimeout(() => handleExecute(response.session_id), 500);
     } catch (error) {
@@ -99,7 +100,7 @@ const ArkDashboard = () => {
     setCurrentSessionId(sessionId);
     clearEvents();
     setBudgetError(false);
-    
+
     // Auto-start execution
     setTimeout(() => handleExecute(sessionId), 500);
   };
@@ -171,11 +172,19 @@ const ArkDashboard = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Navigation */}
+          <Button asChild variant="outline" size="sm" className="flex items-center gap-2">
+            <Link to="/todos">
+              <ListChecks className="w-4 h-4" />
+              <span className="hidden sm:inline">Todos</span>
+            </Link>
+          </Button>
+
           {currentSessionId && (
             <>
-              <AgentSelector 
+              <AgentSelector
                 sessionId={currentSessionId}
                 onAgentAssigned={() => {}}
               />
@@ -313,7 +322,7 @@ const ArkDashboard = () => {
       {/* Execution Summary */}
       {currentSession && ['completed', 'failed'].includes(currentSession.status) && (
         <div className="px-4 sm:px-6 pt-4">
-          <ExecutionSummary 
+          <ExecutionSummary
             sessionId={currentSessionId}
             status={currentSession.status}
           />
@@ -362,7 +371,7 @@ const ArkDashboard = () => {
             {!currentSessionId && (
               <QuickActionsPanel onWorkflowStart={handleWorkflowStart} />
             )}
-            
+
             {currentSessionId && (
               <>
                 <LiveExecutionFeed events={events} isConnected={isConnected} />
