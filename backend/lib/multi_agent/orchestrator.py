@@ -713,7 +713,7 @@ class PipelineOrchestrator:
             return
         try:
             project.updated_at = datetime.utcnow()
-            doc = project.model_dump()
+            doc = project.model_dump(mode='json')
             await self._db.projects.replace_one(
                 {"id": project.id},
                 doc,

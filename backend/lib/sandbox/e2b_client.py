@@ -137,7 +137,6 @@ class E2BSandboxClient:
                 cmd=command,
                 timeout=timeout,
                 cwd=workdir or "/home/user",
-                env_vars=env or {},
             )
             duration = (datetime.utcnow() - start).total_seconds() * 1000
             return CommandResult(

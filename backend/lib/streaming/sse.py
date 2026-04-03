@@ -7,6 +7,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that converts datetime objects to ISO format strings."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat() + "Z"
+        return super().default(obj)
+
+
 class SSEManager:
     """Server-Sent Events manager for real-time pipeline updates."""
 
@@ -75,7 +83,7 @@ class SSEManager:
             while True:
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=30.0)
-                    yield f"data: {json.dumps(event)}\n\n"
+                    yield f"data: {json.dumps(event, cls=DateTimeEncoder)}\n\n"
 
                     if event.get("event_type") in ["pipeline_complete", "error"]:
                         yield f"data: {json.dumps({'event_type': 'stream_end', 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
