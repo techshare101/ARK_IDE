@@ -64,7 +64,30 @@ export function PipelineView({ project, events, onStop }) {
     const messages = {};
     let currentStage = null;
     
-    if (!events || events.length === 0) return { statuses, messages, currentStage };
+    // If no events, infer stage status from project.stage
+    if (!events || events.length === 0) {
+      const projectStage = project?.stage || 'idle';
+      if (projectStage === 'complete') {
+        // Mark all stages as completed
+        STAGES.forEach(s => { statuses[s.id] = 'completed'; });
+      } else if (projectStage === 'failed') {
+        // Find which stage failed (assume last one)
+        const failedIdx = STAGES.findIndex(s => s.id === 'monitor');
+        STAGES.forEach((s, idx) => {
+          statuses[s.id] = idx < failedIdx ? 'completed' : (idx === failedIdx ? 'failed' : 'pending');
+        });
+      } else if (projectStage !== 'idle') {
+        // Find current running stage
+        const stageMap = { planning: 'planner', building: 'builder', testing: 'tester', deploying: 'deployer', monitoring: 'monitor' };
+        const currentId = stageMap[projectStage];
+        const currentIdx = STAGES.findIndex(s => s.id === currentId);
+        STAGES.forEach((s, idx) => {
+          statuses[s.id] = idx < currentIdx ? 'completed' : (idx === currentIdx ? 'running' : 'pending');
+        });
+        currentStage = STAGES[currentIdx];
+      }
+      return { statuses, messages, currentStage };
+    }
     
     events.forEach(event => {
       const agent = (event.agent || '').toLowerCase();
@@ -78,7 +101,7 @@ export function PipelineView({ project, events, onStop }) {
     });
     
     return { statuses, messages, currentStage };
-  }, [events]);
+  }, [events, project]);
 
   const completedCount = STAGES.filter(s => statuses[s.id] === 'completed').length;
   const runningStage = STAGES.find(s => statuses[s.id] === 'running');
