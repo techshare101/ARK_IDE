@@ -168,23 +168,19 @@ export default function App() {
     setCreating(true);
     try {
       const project = await arkAPI.createProject(goal);
-      const projectId = project.project_id || project.id; // Handle both formats
-      const projectObj = { ...project, id: projectId }; // Ensure id field exists
+      const projectId = project.project_id || project.id;
+      const projectObj = { ...project, id: projectId };
       setProjects(prev => [projectObj, ...prev]);
       setActiveProject(projectObj);
       setView('project');
       setActiveTab('pipeline');
       clearEvents();
       setFiles([]); setTests([]); setDeploy(null);
-      addToast('Project created! Starting pipeline...', 'success');
-      try {
-        await arkAPI.runPipeline(projectId);
-        const running = { ...projectObj, status: 'running' };
-        setActiveProject(running);
-        setProjects(prev => prev.map(p => p.id === running.id ? running : p));
-      } catch (runErr) {
-        addToast('Pipeline start failed: ' + runErr.message, 'warning');
-      }
+      addToast('Project created! Pipeline starting...', 'success');
+      // Pipeline auto-starts in background, no need to call /run
+      const running = { ...projectObj, status: 'running' };
+      setActiveProject(running);
+      setProjects(prev => prev.map(p => p.id === running.id ? running : p));
     } catch (err) {
       addToast('Failed to create project: ' + err.message, 'error');
     } finally {
