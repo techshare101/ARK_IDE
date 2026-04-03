@@ -124,11 +124,14 @@ frontend:
     file: "/app/frontend/src/components/ark/ArkDashboard.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Added PreviewPanel component with tabbed interface (Preview/Files). Updated desktop layout from 2-panel to 3-panel (Execution Feed + Preview + Plan). Preview panel includes iframe for app preview, URL bar with refresh button, and placeholder for file browser. Verified via screenshot - all 3 panels visible with working tabs."
+      - working: true
+        agent: "testing"
+        comment: "Tested App Preview window in ArkDashboard. Preview panel is present with tabbed interface (Preview/Files tabs visible). URL bar and refresh button are functional. Component renders correctly in 3-panel desktop layout. Feature is working as expected."
   
   - task: "Fix mobile overlay blocking Quick Actions"
     implemented: true
@@ -136,23 +139,49 @@ frontend:
     file: "/app/frontend/src/components/ark/ArkDashboard.jsx"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Changed empty state overlay from 'flex' to 'hidden lg:flex' to only show on desktop, preventing z-index blocking on mobile. Added preview panel to mobile layout with fixed height. Verified via screenshot - Quick Actions fully visible and clickable on mobile."
+      - working: true
+        agent: "testing"
+        comment: "Mobile overlay fix verified. Quick Actions are visible and accessible. No z-index blocking issues observed."
+  
+  - task: "Premium UI Integration (Header, Footer, HeroSection)"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/App.jsx, /app/frontend/src/components/ark/Header.jsx, /app/frontend/src/components/ark/Footer.jsx, /app/frontend/src/components/ark/HeroSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL: Premium UI components (Header, Footer, HeroSection) exist in codebase but are NOT integrated into the actual app. App.js routes to ArkDashboard.jsx instead of App.jsx with premium components. Components found: Header.jsx (with logo, v3.0, connection status, theme toggle), Footer.jsx (with branding, columns, social icons, copyright), HeroSection.jsx (with hero text, textarea, quick-start cards). These components are not being rendered in the live app at http://localhost:3000."
+  
+  - task: "Fix false 'Cannot connect to backend API' error on startup"
+    implemented: false
+    working: false
+    file: "/app/frontend/src/components/ark/ArkDashboard.jsx, /app/backend/routers/health.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BUG: False error toast 'Cannot connect to backend API' appears on page load even though backend is healthy. Root cause: API contract mismatch. Backend /api/health/ returns {status: 'ok', ...} but frontend expects {healthy: true}. In ArkDashboard.jsx line 44, code checks health.healthy which is undefined, causing !health.healthy to be true and triggering the error toast. Backend health check actually succeeds (verified with fetch test). Fix needed: Either change backend to return {healthy: true} or change frontend to check health.status === 'ok'."
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: true
 
 test_plan:
   current_focus:
-    - "Fix infinite thinking loop in agent execution"
-    - "Implement App Preview window"
-    - "Fix mobile overlay blocking Quick Actions"
+    - "Fix false 'Cannot connect to backend API' error on startup"
+    - "Premium UI Integration (Header, Footer, HeroSection)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -160,3 +189,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Completed both P0 fixes. Backend: Updated planner system prompt with strict termination rules, reduced max_steps to 10, improved history tracking. Agent now completes tasks properly (tested: 2-step completion for file creation). Frontend: Added 3-panel layout with App Preview (iframe + tabs), fixed mobile overlay z-index issue. Need comprehensive testing of: (1) Agent execution loop with various prompts, (2) Preview panel functionality, (3) Mobile responsiveness."
+  - agent: "testing"
+    message: "Completed premium UI integration testing. CRITICAL FINDINGS: (1) False error 'Cannot connect to backend API' appears on startup due to API contract mismatch - backend returns {status: 'ok'} but frontend expects {healthy: true}. Backend is actually healthy. (2) Premium UI components (Header, Footer, HeroSection) exist in codebase but are NOT integrated - app routes to ArkDashboard instead of App.jsx with premium components. (3) App Preview window and mobile overlay fixes are working correctly. Two high-priority issues need immediate attention."

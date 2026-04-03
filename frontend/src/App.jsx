@@ -1,4 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { Header }       from './components/ark/Header';
+import { Footer }       from './components/ark/Footer';
+import { HeroSection }  from './components/ark/HeroSection';
 import { GoalInput }    from './components/ark/GoalInput';
 import { PipelineView } from './components/ark/PipelineView';
 import { EventLog }     from './components/ark/EventLog';
@@ -74,8 +78,24 @@ export default function App() {
     ? arkAPI.getStreamUrl(activeProject.id) : null;
   const { events, connected, error: sseError, clearEvents } = useSSE(streamUrl, !!streamUrl);
 
+  // Health check with retry logic to prevent false "Cannot connect" errors on startup
   useEffect(() => {
-    arkAPI.health().then(() => setBackendOk(true)).catch(() => setBackendOk(false));
+    const checkHealthWithRetry = async (attempt = 1, maxAttempts = 3) => {
+      try {
+        await arkAPI.health();
+        setBackendOk(true);
+      } catch (err) {
+        if (attempt < maxAttempts) {
+          const delay = attempt * 1000; // Exponential backoff: 1s, 2s
+          console.log(`Health check failed (attempt ${attempt}/${maxAttempts}), retrying in ${delay}ms...`);
+          setTimeout(() => checkHealthWithRetry(attempt + 1, maxAttempts), delay);
+        } else {
+          console.error('Health check failed after', maxAttempts, 'attempts');
+          setBackendOk(false);
+        }
+      }
+    };
+    checkHealthWithRetry();
   }, []);
 
   useEffect(() => { loadProjects(); }, []);
@@ -240,141 +260,182 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
+    <ThemeProvider>
+      <div className="flex flex-col h-screen overflow-hidden" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        
+        {/* Premium Header */}
+        <Header connected={backendOk === true} />
 
-      {/* ── Sidebar ── */}
-      <div className={`flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900 transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
-        {/* Logo */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-              <span className="text-indigo-400 text-xs font-bold">A</span>
-            </div>
-            <span className="text-sm font-semibold text-slate-200">ARK IDE</span>
-            <span className="text-xs text-indigo-400 font-mono">v3.0</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {backendOk === true  && <div className="w-2 h-2 rounded-full bg-green-400" title="Backend connected" />}
-            {backendOk === false && <div className="w-2 h-2 rounded-full bg-red-400"   title="Backend offline"  />}
-            {backendOk === null  && <div className="w-2 h-2 rounded-full bg-slate-600" title="Checking..."      />}
-          </div>
-        </div>
-
-        {/* New project CTA */}
-        <div className="px-3 py-3 border-b border-slate-800 flex-shrink-0">
-          <button onClick={handleNewProject}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors active:scale-95">
-            + New Project
-          </button>
-        </div>
-
-        {/* Project list */}
-        <div className="flex-1 overflow-hidden p-3">
-          <ProjectList
-            projects={projects}
-            activeProjectId={activeProject?.id}
-            onSelect={handleSelectProject}
-            onRun={handleRunPipeline}
-            onDelete={handleDeleteProject}
-            onNew={handleNewProject}
-            loading={loadingProjects}
-          />
-        </div>
-      </div>
-
-      {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-800 bg-slate-900 flex-shrink-0">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">
-            <Menu className="w-4 h-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            {activeProject ? (
-              <p className="text-sm text-slate-300 truncate">{activeProject.goal}</p>
-            ) : (
-              <p className="text-sm text-slate-500">Select or create a project</p>
-            )}
-          </div>
-          {activeProject && (
-            <div className="flex items-center gap-2">
-              {connected && <span className="flex items-center gap-1.5 text-xs text-green-400"><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />Live</span>}
-              {sseError  && <span className="text-xs text-yellow-400">{sseError}</span>}
-            </div>
-          )}
-        </div>
-
-        {/* Content area */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {(view === 'list' || view === 'new') && (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="w-full max-w-2xl">
-                <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-slate-100 mb-2">ARK IDE <span className="text-indigo-400">v3.0</span></h1>
-                  <p className="text-slate-400">Autonomous software development — describe what you want to build</p>
+        <div className="flex flex-1 overflow-hidden">
+          {/* ── Sidebar ── */}
+          <div className={`flex-shrink-0 flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`} style={{
+            borderRight: '1px solid var(--border)',
+            background: 'var(--bg-secondary)'
+          }}>
+            {/* Logo */}
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(124, 58, 237, 0.2)' }}>
+                  <span className="text-xs font-bold" style={{ color: 'var(--accent-purple)' }}>A</span>
                 </div>
-                <GoalInput onSubmit={handleCreateProject} loading={creating} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>ARK IDE</span>
+                <span className="text-xs font-mono" style={{ color: 'var(--accent-purple)' }}>v3.0</span>
               </div>
             </div>
-          )}
 
-          {view === 'project' && activeProject && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Tabs */}
-              <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-800 bg-slate-900 flex-shrink-0">
-                {TABS.map(tab => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button key={tab.id} onClick={() => handleTabChange(tab.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        isActive ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
-                      }`}>
-                      <Icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                      {tab.id === 'events' && events.length > 0 && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 text-[10px]">{events.length}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tab content */}
-              <div className="flex-1 overflow-auto p-4">
-                {activeTab === 'pipeline' && (
-                  <PipelineView 
-                    project={activeProject} 
-                    events={events} 
-                    onStop={handleStopPipeline}
-                  />
-                )}
-                {activeTab === 'events' && (
-                  <EventLog events={events} connected={connected} onClear={clearEvents} />
-                )}
-                {activeTab === 'files' && (
-                  <FileExplorer files={files} loading={loadingFiles} />
-                )}
-                {activeTab === 'tests' && (
-                  <TestResults tests={tests} loading={loadingFiles} />
-                )}
-                {activeTab === 'deploy' && (
-                  <DeployPanel deploy={deploy} loading={loadingDeploy} />
-                )}
-              </div>
+            {/* New project CTA */}
+            <div className="px-3 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+              <button onClick={handleNewProject}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium transition-all active:scale-95 hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))' }}>
+                + New Project
+              </button>
             </div>
-          )}
+
+            {/* Project list */}
+            <div className="flex-1 overflow-hidden p-3">
+              <ProjectList
+                projects={projects}
+                activeProjectId={activeProject?.id}
+                onSelect={handleSelectProject}
+                onRun={handleRunPipeline}
+                onDelete={handleDeleteProject}
+                onNew={handleNewProject}
+                loading={loadingProjects}
+              />
+            </div>
+          </div>
+
+          {/* ── Main content ── */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+
+            {/* Top bar */}
+            <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0" style={{
+              borderBottom: '1px solid var(--border)',
+              background: 'var(--bg-secondary)'
+            }}>
+              <button onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{
+                  color: 'var(--text-muted)',
+                  background: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.background = 'transparent';
+                }}>
+                <Menu className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                {activeProject ? (
+                  <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{activeProject.goal}</p>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Select or create a project</p>
+                )}
+              </div>
+              {activeProject && (
+                <div className="flex items-center gap-2">
+                  {connected && <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--accent-green)' }}><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--accent-green)' }} />Live</span>}
+                  {sseError  && <span className="text-xs" style={{ color: 'var(--accent-red)' }}>{sseError}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Content area */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {(view === 'list' || view === 'new') && (
+                <div className="flex-1 overflow-auto">
+                  <HeroSection onStartBuild={handleCreateProject} />
+                </div>
+              )}
+
+              {view === 'project' && activeProject && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Tabs */}
+                  <div className="flex items-center gap-1 px-4 py-2 flex-shrink-0" style={{
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--bg-secondary)'
+                  }}>
+                    {TABS.map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button key={tab.id} onClick={() => handleTabChange(tab.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            isActive ? '' : ''
+                          }`}
+                          style={{
+                            background: isActive ? 'rgba(124, 58, 237, 0.2)' : 'transparent',
+                            color: isActive ? 'var(--accent-purple)' : 'var(--text-muted)',
+                            border: isActive ? '1px solid rgba(124, 58, 237, 0.3)' : '1px solid transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.color = 'var(--text-secondary)';
+                              e.currentTarget.style.background = 'var(--bg-tertiary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.color = 'var(--text-muted)';
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}>
+                          <Icon className="w-3.5 h-3.5" />
+                          {tab.label}
+                          {tab.id === 'events' && events.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px]" style={{
+                              background: 'rgba(124, 58, 237, 0.3)',
+                              color: 'var(--accent-purple)'
+                            }}>{events.length}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tab content */}
+                  <div className="flex-1 overflow-auto p-4">
+                    {activeTab === 'pipeline' && (
+                      <PipelineView 
+                        project={activeProject} 
+                        events={events} 
+                        onStop={handleStopPipeline}
+                      />
+                    )}
+                    {activeTab === 'events' && (
+                      <EventLog events={events} connected={connected} onClear={clearEvents} />
+                    )}
+                    {activeTab === 'files' && (
+                      <FileExplorer files={files} loading={loadingFiles} />
+                    )}
+                    {activeTab === 'tests' && (
+                      <TestResults tests={tests} loading={loadingFiles} />
+                    )}
+                    {activeTab === 'deploy' && (
+                      <DeployPanel deploy={deploy} loading={loadingDeploy} />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Premium Footer */}
+        <Footer />
+
+        {/* ── Toast notifications ── */}
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-80">
+          {toasts.map(toast => (
+            <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
+          ))}
         </div>
       </div>
-
-      {/* ── Toast notifications ── */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-80">
-        {toasts.map(toast => (
-          <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
-        ))}
-      </div>
-    </div>
+    </ThemeProvider>
   );
 }
