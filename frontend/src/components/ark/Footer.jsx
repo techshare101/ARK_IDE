@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Github, Twitter } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -26,9 +26,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Platform</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>Documentation</a></li>
-              <li><a href="#" className="text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>API Reference</a></li>
-              <li><a href="#" className="text-sm hover:underline" style={{ color: 'var(--text-muted)' }}>Examples</a></li>
+              <li><span className="text-sm" style={{ color: 'var(--text-muted)' }}>Documentation</span></li>
+              <li><span className="text-sm" style={{ color: 'var(--text-muted)' }}>API Reference</span></li>
+              <li><span className="text-sm" style={{ color: 'var(--text-muted)' }}>Examples</span></li>
             </ul>
           </div>
 
@@ -48,13 +48,8 @@ export function Footer() {
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             © 2026 ARK Intelligence. Built with autonomous agents.
           </p>
-          <div className="flex items-center gap-4">
-            <a href="#" className="hover:scale-110 transition-transform" style={{ color: 'var(--text-muted)' }}>
-              <Github className="w-5 h-5" />
-            </a>
-            <a href="#" className="hover:scale-110 transition-transform" style={{ color: 'var(--text-muted)' }}>
-              <Twitter className="w-5 h-5" />
-            </a>
+          <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <span>Connect with us</span>
           </div>
         </div>
       </div>

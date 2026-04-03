@@ -79,8 +79,6 @@ export function HeroSection({ onStartBuild }) {
               color: 'var(--text-primary)',
               outline: 'none'
             }}
-            onFocus={(e) => e.target.style.borderColor = 'var(--accent-purple)'}
-            onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
           />
           
           {goal.trim() && (
