@@ -38,11 +38,18 @@ function FileTree({ files, onFileClick, selectedFile }) {
   const tree = React.useMemo(() => {
     const root = {};
     files.forEach(file => {
-      const parts = file.file_path.split('/');
+      // Safety check: skip files without path
+      if (!file) return;
+      
+      // Handle both 'file_path' and 'path' formats
+      const filePath = file.file_path || file.path;
+      if (!filePath) return;
+      
+      const parts = filePath.split('/');
       let current = root;
       parts.forEach((part, idx) => {
         if (!current[part]) {
-          current[part] = idx === parts.length - 1 ? file : {};
+          current[part] = idx === parts.length - 1 ? { ...file, file_path: filePath } : {};
         }
         current = current[part];
       });
