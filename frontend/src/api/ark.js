@@ -98,6 +98,20 @@ class ArkAPI {
   async executeWorkflow(type) {
     throw new Error(`Workflow "${type}" not yet available`);
   }
+
+  // Agent stubs (agents are internal to the pipeline, not externally assignable)
+  async listAgents() {
+    return { agents: [] };
+  }
+  async assignAgent(sessionId, role) {
+    return { session_id: sessionId, role };
+  }
+
+  // Execution summary — derived from project detail
+  async getExecutionSummary(id) {
+    const project = await this.getProject(id);
+    return { summary: project.summary || project.goal || null };
+  }
 }
 
 export const arkAPI = new ArkAPI();
