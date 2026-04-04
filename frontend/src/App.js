@@ -201,33 +201,14 @@ export default function App() {
   };
 
   const handleRunPipeline = async (projectId) => {
-    try {
-      await arkAPI.runPipeline(projectId);
-      const running = projects.find(p => p.id === projectId);
-      if (running) {
-        const updated = { ...running, status: 'running' };
-        setProjects(prev => prev.map(p => p.id === projectId ? updated : p));
-        if (activeProject?.id === projectId) {
-          setActiveProject(updated);
-          clearEvents();
-        }
-      }
-      addToast('Pipeline started!', 'info');
-    } catch (err) {
-      addToast('Failed to run pipeline: ' + err.message, 'error');
-    }
+    addToast('Pipeline auto-starts on project creation. Create a new project to run.', 'info');
   };
 
   const handleStopPipeline = async () => {
     if (!activeProject?.id) return;
     if (!window.confirm('Stop the running pipeline? This will terminate all agents.')) return;
-    
     try {
-      // Call DELETE /projects/{id}/run
-      await fetch(`${arkAPI.baseUrl}/projects/${activeProject.id}/run`, {
-        method: 'DELETE',
-      });
-      
+      await arkAPI.cancelPipeline(activeProject.id);
       const stopped = { ...activeProject, status: 'failed', error: 'Stopped by user' };
       setActiveProject(stopped);
       setProjects(prev => prev.map(p => p.id === stopped.id ? stopped : p));

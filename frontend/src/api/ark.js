@@ -26,13 +26,9 @@ class ArkAPI {
   }
 
   async createSession(userPrompt, workspacePath = '/app') {
-    // Create project and auto-start pipeline
+    // Create project — pipeline auto-starts in the background
     const project = await this.createProject(userPrompt, workspacePath);
     const projectId = project.project_id || project.id;
-    
-    // Immediately trigger the pipeline
-    await this.runPipeline(projectId);
-    
     return { ...project, project_id: projectId };
   }
 
@@ -44,8 +40,8 @@ class ArkAPI {
     return this.request('GET', `/api/projects/${id}`);
   }
 
-  async runPipeline(id) {
-    return this.request('POST', `/api/projects/${id}/run`);
+  async cancelPipeline(id) {
+    return this.request('POST', `/api/projects/${id}/cancel`);
   }
 
   async getFiles(id) {
@@ -53,11 +49,13 @@ class ArkAPI {
   }
 
   async getTests(id) {
-    return this.request('GET', `/api/projects/${id}/tests`);
+    const project = await this.getProject(id);
+    return project.test_results ? [project.test_results] : [];
   }
 
   async getDeploy(id) {
-    return this.request('GET', `/api/projects/${id}/deploy`);
+    const project = await this.getProject(id);
+    return project.deploy_info || null;
   }
 
   async approveAction(id, actionId, approved) {
