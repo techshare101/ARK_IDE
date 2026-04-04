@@ -99,6 +99,13 @@ class ArkAPI {
     throw new Error(`Workflow "${type}" not yet available`);
   }
 
+  // File changes — maps to the existing files endpoint
+  async getFileChanges(id) {
+    const files = await this.getFiles(id);
+    const list = Array.isArray(files) ? files : (files.files || []);
+    return { file_changes: list };
+  }
+
   // Agent stubs (agents are internal to the pipeline, not externally assignable)
   async listAgents() {
     return { agents: [] };
