@@ -74,9 +74,29 @@ class ArkAPI {
     return this.health();
   }
 
-  // SSE stream URL
+  // SSE stream URL (both casings for compatibility)
   getStreamUrl(id) {
     return `${API_BASE}/api/projects/${id}/stream`;
+  }
+  getStreamURL(id) {
+    return this.getStreamUrl(id);
+  }
+
+  // Session aliases (session == project in ARK IDE)
+  async getSession(id) {
+    return this.getProject(id);
+  }
+  async executeSession(id) {
+    // Pipeline auto-starts on project creation — this is a no-op
+    return { status: 'running' };
+  }
+
+  // Workflow stubs (not yet implemented in backend)
+  async listWorkflows() {
+    return { workflows: [] };
+  }
+  async executeWorkflow(type) {
+    throw new Error(`Workflow "${type}" not yet available`);
   }
 }
 

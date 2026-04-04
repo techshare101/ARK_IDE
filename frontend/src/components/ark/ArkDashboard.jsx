@@ -84,13 +84,13 @@ const ArkDashboard = () => {
   const handleCreateSession = async (prompt, workspacePath) => {
     try {
       const response = await arkAPI.createSession(prompt, workspacePath);
-      setCurrentSessionId(response.session_id);
+      setCurrentSessionId(response.project_id || response.session_id);
       clearEvents();
       setBudgetError(false);
       toast.success('Session created successfully!');
 
       // Auto-start execution
-      setTimeout(() => handleExecute(response.session_id), 500);
+      setTimeout(() => handleExecute(response.project_id || response.session_id), 500);
     } catch (error) {
       console.error('Error creating session:', error);
       toast.error('Failed to create session');
@@ -127,7 +127,7 @@ const ArkDashboard = () => {
 
     setProcessingApproval(true);
     try {
-      await arkAPI.approveAction(currentSessionId, approved);
+      await arkAPI.approveAction(currentSessionId, null, approved);
       toast.success(approved ? 'Action approved' : 'Action rejected');
     } catch (error) {
       console.error('Error processing approval:', error);
